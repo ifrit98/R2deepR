@@ -18,6 +18,9 @@ Depends:
   zeallot,
   ggplot2,
   purrr,
-  rlang
+  tibble,
+  stringr,
+  rlang,
+  gridExtra
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0

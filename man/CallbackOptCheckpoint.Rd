@@ -43,6 +43,7 @@ Custom callback for saving epoch optimizer weights
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-new"></a>}}
+\if{latex}{\out{\hypertarget{method-new}{}}}
 \subsection{Method \code{new()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CallbackOptCheckpoint$new(
@@ -55,6 +56,7 @@ Custom callback for saving epoch optimizer weights
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-on_epoch_end"></a>}}
+\if{latex}{\out{\hypertarget{method-on_epoch_end}{}}}
 \subsection{Method \code{on_epoch_end()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CallbackOptCheckpoint$on_epoch_end(epoch, logs = list())}\if{html}{\out{</div>}}
@@ -63,6 +65,7 @@ Custom callback for saving epoch optimizer weights
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

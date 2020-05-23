@@ -90,28 +90,9 @@ function(x, f, margin = 2L, center = FALSE, type = "standard") {
 
 
 if (FALSE) {
-  # # Center data
-  # if (center) {
-  #   center <- colMeans(x, na.rm = TRUE)
-  #   x <- sweep(x, margin, center, check.margin = FALSE)
-  # }
 
-  # # Scale data
-  # f <- function(v) {
-  #   v <- v[!is.na(v)]
-  #   sqrt(sum(v^2)/max(1, length(v) - 1L))
-  # }
-
-  # l <- rep(x1, 4)
-  # dim(l) <- c(10, 4)
-  # sweep(l, margin, apply(l, 2L, standardize), check.margin = FALSE)
-
-
-  tbl <- as_tibble(mtcars)
-  mat <- as.matrix(mtcars)
-  df <- as.data.frame(mtcars)
-
-  nc <- ncol(x)
+  x  <- mtcars
+  nc <- ncol(mtcars)
 
   # Center data
   center <- colMeans(x, na.rm = TRUE)
@@ -126,6 +107,9 @@ if (FALSE) {
   z <- sweep(y, 2L, scale, "/", check.margin = FALSE)
 
 
+  scaler(mtcars)
+  tbl <- as_tibble(mtcars)
+  scaler(tbl)
 
 
   x1 <- rnorm(10, 400, 30) %>% as.integer()

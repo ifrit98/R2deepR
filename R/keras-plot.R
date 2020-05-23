@@ -122,8 +122,8 @@ keras_plot <-
   }
 
 
-LR_ACC  <- 1 # learn rate versus accuracy
-ACC_TSS <- 2 # accuracy vs training set size
+# LR_ACC  <- 1 # learn rate versus accuracy
+# ACC_TSS <- 2 # accuracy vs training set size
 
 # TODO: Make wrapper for this to loop over histories list?
 # TODO: control flow for how to plot.  e.g. if LR vs acc, then x = LR, y = acc,
@@ -168,17 +168,17 @@ keras.plot <- function(histories, x_axis = NULL) {
 
 
 
-as.data.frame.keras <- function (x, ...) {
-  browser()
-  x$metrics <- x$metrics[x$params$metrics]
+
+as.data.frame.keras_training_history <- function (x, ...) {
+  if (tensorflow::tf_version() < "2.2")
+    x$metrics <- x$metrics[x$params$metrics]
   values <- x$metrics
   pad <- x$params$epochs - length(values$loss)
   pad_data <- list()
   for (metric in x$params$metrics) pad_data[[metric]] <- rep_len(NA,
                                                                  pad)
   values <- rbind(values, pad_data)
-  df <- data.frame(epoch = seq_len(x$params$epochs),
-                   value = unlist(values),
+  df <- data.frame(epoch = seq_len(x$params$epochs), value = unlist(values),
                    metric = rep(sub("^val_", "", names(x$metrics)), each = x$params$epochs),
                    data = rep(grepl("^val_", names(x$metrics)), each = x$params$epochs))
   rownames(df) <- NULL
@@ -188,12 +188,10 @@ as.data.frame.keras <- function (x, ...) {
   df
 }
 
+# LR_ACC = 1
+# LR_TSS = 2
 
-
-LR_ACC = 1
-LR_TSS = 2
-
-
+# TODO: find way to change axis labels easily by argument
 plot_learning_curves <-
   function (x,
             y, # Unused
@@ -218,7 +216,7 @@ plot_learning_curves <-
       p <- ggplot2::ggplot(df,
                            ggplot2::aes_(
                              ~ epoch, # Substitute x_axis argument here?
-                             ~ value,
+                             ~ value, # Substitute y_axis argument here?
                              color = ~ data,
                              fill = ~ data
                            ))
@@ -246,6 +244,6 @@ plot_learning_curves <-
       )
     p <- p + ggplot2::labs(x = x_axis_label)
     # TODO: Make sure x_axis_values get set accordingly... blank right now
-    p <- p + scale_x_discrete(breaks = 1:5, labels = x_axis_values)
+    # p <- p + scale_x_discrete(breaks = 1:5, labels = x_axis_values)
     return(p)
   }

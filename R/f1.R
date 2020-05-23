@@ -3,6 +3,12 @@
 #' @importFrom magrittr %<>%
 f1_score_binary <- function(logits, labels) {
 
+  # Unwrap tensors with $numpy() if `is_tensor()`
+  if (is_tensor(logits) || is_tensor(labels)) {
+    logits %<>% {.$numpy()}
+    labels %<>% {.$numpy()}
+  }
+
   stopifnot(dim(logits) == dim(labels))
 
   logits %<>% as.integer()
@@ -11,10 +17,10 @@ f1_score_binary <- function(logits, labels) {
   # Grab indices of all true class a values from labels array
   true_a <- which(labels == 1)
 
-  true_pos  <- length(which(logits[true_a] == 1))
+  true_pos  <- length(which(logits[true_a ] == 1))
   true_neg  <- length(which(logits[-true_a] == 0))
   false_pos <- length(which(logits[-true_a] == 1))
-  false_neg <- length(which(logits[true_a] == 0))
+  false_neg <- length(which(logits[true_a ] == 0))
 
   # Compute precision (true pos / true pos + false pos)
   # Of examples recognized as cats, what % actually are cats

@@ -1,6 +1,6 @@
 
-# Inheriting KerasModel
-gated_linear_unit <-
+# WIP
+# gated_linear_unit <-
   function(
     filters = 32,
     kernel_size = 3,
@@ -50,7 +50,7 @@ gated_linear_unit <-
 
 
 
-# As R6 Generator
+
 GatedLinearUnit <-
   R6::R6Class(
     "GatedLinearUnit",
@@ -149,6 +149,12 @@ GatedLinearUnit <-
   )
 
 
+#' Gated Linear Unit
+#'
+#' Computes hidden layer h_l as:
+#'   h_l(X) = (X ∗ W + b) ⊗ σ(X ∗ V + c)
+#' @importFrom keras create_layer
+#' @references Dauphin et al. 2017 https://arxiv.org/pdf/1612.08083.pdf
 #' @export
 layer_glu <-
   function(object,
@@ -246,7 +252,6 @@ GLUBlock <-
       },
 
       count_params = function() {
-        browser()
 
         params <-
           sapply(self$layers, function(x) x$count_params()) %>%
@@ -258,6 +263,9 @@ GLUBlock <-
   )
 
 
+#' Returns a number of connected Gated Linear Units. See `layer_glu()`
+#'
+#' @importFrom keras create_layer
 #' @export
 layer_glu_block <-
   function(object,

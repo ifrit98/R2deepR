@@ -1,197 +1,207 @@
-# Bengaliai: https://www.kaggle.com/h030162/how-to-get-score-of-0-98-with-one-gtx-1080ti
-
-# Recommender systems: https://towardsdatascience.com/introduction-to-recommender-systems-6c66cf15ada
-
-# Learning curves
-# 10.4 diagnosing bias-variance: https://www.youtube.com/watch?v=fDQkUN9yw44&list=PLLssT5z_DsK-h9vYZkQkYNWcItqhlRJLN&index=61
-# 10.6 learning curves https://www.youtube.com/watch?v=ISBGFY-gBug&list=PLLssT5z_DsK-h9vYZkQkYNWcItqhlRJLN&index=63
-# 11.4 precision-recall: https://www.youtube.com/watch?v=W5meQnGACGo&list=PLLssT5z_DsK-h9vYZkQkYNWcItqhlRJLN&index=68
 
 
-# Assume SGD with momentum for optimizer for parameter grid search?
-#
+compute_training_set_sizes <- function(n_elems, type) {
+  (scale <- switch(
+    type,
+    "log" = log(n_elems) %>% floor(),
+    "log2" = log(n_elems, base = 2) %>% floor(),
+    "linear" = linear_factor
+  ))
 
-if (FALSE) {
+  inc <- floor(n_elems / scale)
 
+  (train_sizes <- switch(
+    type,
+    "log" = lapply(1:scale, function(x) floor(e^x)),
+    "log2" = lapply(1:scale, function(x) floor(2^x)),
+    "linear" = lapply(1:scale, function(x) floor(x * inc))
+  ))
 
-  model <- R2deepR::ex_model()
-
-  c(x_train, x_test, y_train, y_test) %<-% deepR::mnist_data()
-
-  epochs <- 10
-  LR <- vector("list", epochs)
-
-
-  collect_lr <- callback_lambda(on_epoch_end = function(epoch, logs) {
-    lr <- model$optimizer$get_config()$learning_rate
-    LR[[epoch+1]] <<- lr
-  })
-
-  hist <- model %>% fit(
-    x_train,
-    y_train,
-    batch_size = 128,
-    epochs = epochs,
-    callbacks = list(collect_lr)
-  )
+  train_sizes
+}
 
 
+# TODO: Update to pass tfdatasets ds objects instead of `x_train`
+#' Complete a set of training runs given an integer set of training set sizes.
+#'
+#' Plots Jtrain and Jcv loss and accuracy curves
+#' @export
+train_set_size_run <-
+  function(model_fn,
+           x_train,
+           y_train,
+           type = "linear",
+           epochs = 25,
+           n_elems = dim(x_train)[1],
+           linear_factor = 10,
+           train_sizes = NULL,
+           min_train_size = NULL,
+           n_runs = NULL) {
 
-  # Plot scheme 1: Jtrain + Jcv as function of training set size
+    # Calculate training set sizes
+    if (is.null(train_sizes))
+      train_sizes <- compute_training_set_sizes(n_elems, type)
 
+    cut_index <- max(which(train_sizes < min_train_size)) + 1
+    if (!is.finite(cut_index))
+      train_sizes <- train_sizes[cut_index:length(train_sizes)]
 
+    # Grab training data
+    # Randomly grab indices to emulate shuffling
+    n_iter <- length(train_sizes)
 
-  # For loop around fit?
-  # Callback?
+    idx <-
+      lapply(1:n_iter, function(i)
+        sample.int(length(x_train[,1]), train_sizes[[i]]))
 
-  # TODO: Generalize for other plot types?  Collect all/some info and then separate out to
-  # postprocess in different functions?
-  train_set_size_run <-
-    function(model,
-             df,
-             type = "linear",
-             n_elems = dim(df)[1],
-             linear_factor = 10,
-             train_sizes = NULL,
-             n_runs = NULL) {
+    train_sets <-
+      lapply(1:n_iter, function(i) x_train[idx[[i]],])
 
-      df <- x_train
-      n_elems <- dim(df)[1]
-      type <- "log"
-      train_sizes <- NULL
+    i <- 1
+    histories <- vector("list", n_iter)
+    plots     <- vector("list", n_iter)
 
-      # Calculate training set sizes
-      (scale <- switch(
-        type,
-        "log" = log(n_elems) %>% floor(),
-        "log2" = log(n_elems, base = 2) %>% floor(),
-        "linear" = linear_factor
-      ))
+    for (i in seq(n_iter)) {
 
-      inc <- floor(n_elems / scale)
+      # Reinstantiate model with fresh weights
+      model <- model_fn() #R2deepR::ex_model()
 
-      if (is.null(train_sizes)) {
-        (train_sizes <- switch(
-          type,
-          "log" = lapply(1:scale, function(x) floor(e^x)),
-          "log2" = lapply(1:scale, function(x) floor(2^x)),
-          "linear" = lapply(1:scale, function(x) floor(x * inc))
-        ))
-      }
+      # Grab current training sets
+      x_train_i <- x_train[idx[[i]],]
+      y_train_i <- y_train[idx[[i]],]
 
-      train_sizes[c(6,7,8,9,10,11)] <- NULL
-
-      # Grab training data
-      # Randomly grab indices to emulate shuffling
-      n_iter <- length(train_sizes)
-      idx <-
-        lapply(1:n_iter, function(i) sample.int(length(df[,1]), train_sizes[[i]]))
-
-      train_sets <- lapply(1:n_iter, function(i) df[idx[[i]],])
-      # train_set <- df[idx[[i]],]
-
-      i <- 1
-      histories <- vector("list", n_iter)
-      plots     <- vector("list", n_iter)
-      for (i in seq(n_iter)) {
-        # Reinstantiate model with fresh weights
-        model <- deepR::ex_model()
-        LR <- list("list", epochs)
-
-        # Grab current training sets
-        x_train_i <- df[idx[[i]],] #train_sets[[i]]
-        y_train_i <- y_train[idx[[i]],]
-
-        # Do traning run
-        hist <- fit(
-          model,
-          x_train_i,
-          y_train_i,
-          validation_data = list(x_test, y_test),
-          callbacks = list(collect_lr),
-          epochs = 10
-        )
-
-        # Save pdf of history plot in a subdir?
-
-        # Collect history and plots
-        hist$metrics$LR <- unlist(LR)
-        # Add LR to hist$metrics so conversion to data.frame succeeds
-        hist$params$metrics <- c(hist$params$metrics, "LR")
-        histories[[i]] <- hist
-        p <- plot(hist)
-        plots[[i]] <- p
-      }
-
-
-      # control flow for different types of metric comparisions
-      # Collect and process results
-      accs <- lapply(histories, function(hist) hist$metrics$accuracy[[epochs]])
-      val_accs <- lapply(histories, function(hist) hist$metrics$val_accuracy[[epochs]])
-
-      # TODO: plot with keras plot dispatch method? (or write your own)
-      plot(
-        1:n_iter,
-        accs,
-        type = "b",
-        xlab = "train_set_size",
-        axes = FALSE,
-        sub = paste0("number of epochs: ", epochs)
+      # Do traning run
+      hist <- fit(
+        model,
+        x_train_i,
+        y_train_i,
+        validation_data = list(x_test, y_test),
+        epochs = epochs
       )
-      # TODO: add axes for each plot?
-      axis(1, 1:n_iter, labels = train_sizes)
-      axis(2, seq(0, 1, 0.001))
-      # TODO: Add epochs legend
-      epochs    <- histories[[i]]$params$epochs
-      best_acc  <- histories[[i]]$metrics$accuracy[[epochs]]
-      best_loss <- histories[[i]]$metrics$loss[[epochs]]
 
-
+      # TODO: Save pdf of history plot in a subdir
+      # TODO: facet history plots so they are on same pdf
+      histories[[i]] <- hist
+      plots[[i]] <- plot(hist)
     }
 
+
+    # Only want last values of each history object
+    df <- bind_as_cols(
+      acc = lapply(histories, function(h) h$metrics$acc %>% last()) %>% unlist(),
+      loss = lapply(histories, function(h) h$metrics$loss %>% last()) %>% unlist(),
+      val_loss = lapply(histories, function(h) h$metrics$val_loss %>% last()) %>% unlist(),
+      val_acc = lapply(histories, function(h) h$metrics$val_acc %>% last()) %>% unlist(),
+      train_sizes = train_sizes %>% unlist()
+    ) %>% as_tibble()
+
+    h <- histories[[1]]
+    h$metrics <- as.list(df)
+    h$params$epochs <- length(df$acc)
+
+    p <- plot_curves_from_keras_history(h, "train_set_size", train_sizes)
+    ggsave(plot_filename, p)
+
+    p
 }
 
 
 
-# mini_batch_size_run <-
-  function(model_fn = deepR::ex_model(),
+
+plot_curves_from_keras_history <-
+  function (x,
+            x_axis_label = NULL,
+            x_axis_values = NULL,
+            metrics = NULL,
+            smooth = getOption("keras.plot.history.smooth", TRUE),
+            theme_bw = getOption("keras.plot.history.theme_bw", FALSE),
+            ...) {
+    requireNamespace("ggplot2", quietly = TRUE)
+
+    df <- as.data.frame(x)
+    x_axis_values %<>% unlist()
+
+    if (is.null(x_axis_label))
+      x_axis_label <- "epochs"
+    if (is.null(metrics))
+      metrics <- names(x$metrics)
+
+    x_len <- length(x_axis_values)
+    df$epoch <- rep(x_axis_values, length(df$epoch) / x_len)
+    df$params$epochs <- x_len
+
+    df <- df[df$metric %in% metrics, ]
+
+    int_breaks <- function(x)
+      pretty(x)[pretty(x) %% 1 == 0]
+
+    if (x$params$do_validation) {
+      p <- ggplot2::ggplot(df,
+                           ggplot2::aes_(~ epoch,
+                                         ~ value,
+                                         color = ~ data,
+                                         fill = ~ data))
+    } else {
+      p <- ggplot2::ggplot(df, ggplot2::aes_(~ epoch, ~ value))
+    }
+    smooth_args <- list(se = FALSE,
+                        method = "loess",
+                        na.rm = TRUE)
+    p <- p + ggplot2::geom_point(shape = 21,
+                                 col = 1,
+                                 na.rm = TRUE)
+    if (smooth && x$params$epochs >= 5)
+      p <- p + do.call(ggplot2::geom_smooth, smooth_args)
+
+    p <- p + ggplot2::facet_grid(metric ~ ., switch = "y",
+                                 scales = "free_y") +
+      ggplot2::scale_x_log10(breaks = x_axis_values) +
+      ggplot2::theme(
+        axis.title.y = ggplot2::element_blank(),
+        strip.placement = "outside",
+        strip.text = ggplot2::element_text(colour = "black",
+                                           size = 11),
+        strip.background = ggplot2::element_rect(fill = NA,
+                                                 color = NA)
+      )
+    p <- p + ggplot2::labs(x = x_axis_label)
+
+    return(p)
+  }
+
+
+
+
+mini_batch_size_run <- function(model_fn,
+                                ds,
+                                val_ds,
+                                batch_sizes = NULL,
                                 optimizer = 'adam',
                                 loss = 'categorical_crossentropy',
                                 metrics = c('accuracy'),
                                 test_epochs = 10,
                                 min_batch_size = 1,
                                 max_batch_size = 1024,
-                                train_set_size = 0) {
-  devtools::load_all()
+                                train_set_size = 0,
+                                return_plots = FALSE) {
 
-  # model <- deepR::ex_model()
-  model_fn <- R2deepR::ex_model
-  model <- model_fn()
+  # Set up batch sizes to try
+  # TODO: (evenly divide total train set size as default instead of powers of 2)
+  if (is.null(batch_sizes))
+    batch_sizes <- pow2_up_to(max_batch_size)
 
-  c(x_train, x_test, y_train, y_test) %<-% R2deepR::mnist_data()
+  cut_index <- max(which(batch_sizes < min_batch_size)) + 1
+  if (is.finite(cut_index))
+    batch_sizes <- batch_sizes[cut_index:length(batch_sizes)]
 
-  ds <-
-    tensor_slices_dataset(tuple(x_train, y_train)) %>%
-    dataset_shuffle(1000) %>%
-    dataset_batch(128, drop_remainder = TRUE)
-
-  val_ds <-
-    tensor_slices_dataset(tuple(x_test, y_test)) %>%
-    dataset_shuffle(1000) %>%
-    dataset_batch(128, drop_remainder = TRUE)
-
-  # Get mod, LCD, and GCD for train_set_size if nonzero
-  divisors <- JSGutils::get_divisors(train_set_size)
-
-  # Set up batch sizes to try (think about total train set size as well)
-  batch_sizes <- JSGutils::pow2_up_to(max_batch_size)
 
   # Initialize history list
   histories <- vector("list", length = length(batch_sizes))
   # histories <- JSGutils:::nlist(1:length(batch_sizes))
 
 
-  # Run training on several models (up to a threshold, with callbacks for early stopping, etc)
+  # Run training on several models
+  # (up to a threshold, with callbacks for early stopping, etc)
   for (i in seq.int(1, length(batch_sizes))) {
 
     # Instantiate new model
@@ -214,10 +224,12 @@ if (FALSE) {
         epochs = test_epochs,
         verbose = 1
       )
-
   }
 
   names(histories) <- batch_sizes
+
+  # TODO: Facet all plots on one and save to PDF
+  all_hist_plots <- lapply(histories, plot)
 
 
   df <- map2(batch_sizes, histories, function(x, y) {
@@ -227,42 +239,68 @@ if (FALSE) {
     tbl <- tibble(batch_size)
 
     bind_cols(df, tbl)
-  }) %>% bind_rows()
+  }) %>% dplyr::bind_rows()
 
-  # Just want the last values!
-  val_accs <-
-    lapply(histories, function(h) h$metrics$val_accuracy %>% tail(1)) %>%
-    unname() %>%
-    unlist()
+  # Only want last values of each history object
+  df <- bind_as_cols(
+    acc = lapply(histories, function(h) h$metrics$acc %>% last()) %>% unlist(),
+    loss = lapply(histories, function(h) h$metrics$loss %>% last()) %>% unlist(),
+    val_loss = lapply(histories, function(h) h$metrics$val_loss %>% last()) %>% unlist(),
+    val_acc = lapply(histories, function(h) h$metrics$val_acc %>% last()) %>% unlist(),
+    batch_sizes = batch_sizes
+  ) %>% as_tibble()
 
-  accs <-
-    lapply(histories, function(h) h$metrics$accuracy %>% tail(1))
+  h <- histories[[1]]
+  h$metrics <- as.list(df)
+  h$params$epochs <- length(df$acc)
 
-  losses <-
-    lapply(histories, function(h) h$metrics$loss %>% tail(1))
-
-  val_losses <-
-    lapply(histories, function(h) h$metrics$val_loss %>% tail(1))
-
-  df <- bind_as_cols(val_accs, batch_sizes)
-  colnames(df) <- c("val_acc", "batch_size")
-  df %<>% as_tibble()
+  (p <- plot_curves_from_keras_history(h, x_axis_label = "batch_size", x_axis_values = batch_sizes))
+  ggsave(plot_filename, p)
 
 
-  dl <- lapply(histories, function(h) tibble::as_tibble(h$metrics))
-  df <- listarrays::bind_as_cols(dl)
+  vacc <- df$val_acc
+  names(vacc) <- batch_sizes
+  best_batch_size <- as.integer(which(vacc == max(vacc)) %>% names())
 
-  bsr <- batch_sizes_rep <- lapply(batch_sizes, function(bs) rep(bs, test_epochs))
-  bs <- tibble(batch_sizes)
 
-  ggplot(df, aes(batch_size, val_acc)) + geom_point() + scale_x_log10()
-  plot(histories[[1]])
+  if (return_plots)
+    return(list(
+      batch_plot = p,
+      hist_plots = all_hist_plots,
+      batch_size = best_batch_size
+    ))
+  else
+    return(best_batch_size)
+}
 
-  # Compare results on validation data
-  # Return best batch size (int)
 
+
+if (FALSE) {
+
+devtools::load_all()
+model_fn <- R2deepR::ex_model
+
+c(x_train, x_test, y_train, y_test) %<-% R2deepR::mnist_data()
+
+ds <-
+  tensor_slices_dataset(tuple(x_train, y_train)) %>%
+  dataset_shuffle(1000) %>%
+  dataset_batch(128, drop_remainder = TRUE)
+
+val_ds <-
+  tensor_slices_dataset(tuple(x_test, y_test)) %>%
+  dataset_shuffle(1000) %>%
+  dataset_batch(128, drop_remainder = TRUE)
+
+best_batch_size <-
+  mini_batch_size_run(model_fn, test_epochs = 2, max_batch_size = 16)
+
+best_train_size <-
+  train_set_size_run(model_fn, x_train = x_train, y_train = y_train)
 
 }
+
+
 
 
 ## TODO: Naive random grid search implementation for n values:

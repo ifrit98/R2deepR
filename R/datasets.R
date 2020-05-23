@@ -29,6 +29,33 @@ mnist_data <- function() {
 
 
 
+#' Prepare an MNIST tfdatasets object and returns `c(ds, val_ds)`,
+#' where `ds` and `val_ds` are tf.data.Dataset objects.  Each
+#' dataset object has a tuple of `(x, y)` pairs of shape `(examples, 784)`.
+#' @importFrom zeallot %<-%
+#' @importFrom tfdatasets tensor_slices_dataset dataset_shuffle
+#' @importFrom tfdatasets dataset_batch dataset_repeat
+#' @export
+mnist_dataset <- function() {
+
+  c(x_train, x_test, y_train, y_test) %<-% mnist_data()
+
+  ds <-
+    tensor_slices_dataset(tuple(x_train, y_train)) %>%
+    dataset_shuffle(1000) %>%
+    dataset_batch(128, drop_remainder = TRUE)
+  # dataset_repeat() %>%
+
+  val_ds <-
+    tensor_slices_dataset(tuple(x_test, y_test)) %>%
+    dataset_shuffle(1000) %>%
+    dataset_batch(128, drop_remainder = TRUE)
+
+  list(ds = ds, val = val_ds)
+}
+
+
+
 #' Convenience wrapper around `keras::dataset_imdb()` which pads
 #' input seqequences for use with a keras model in addition to
 #' preprocessing already applied in keras.
