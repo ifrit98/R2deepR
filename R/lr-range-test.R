@@ -125,7 +125,8 @@ if (FALSE) {
   library(tfdatasets)
   library(reticulate)
 
-  c(x_train, x_test, y_train, y_test) %<-% deepR::mnist_data()
+  devtools::load_all()
+  c(x_train, x_test, y_train, y_test) %<-% mnist_data()
 
   ds <-
     tensor_slices_dataset(tuple(x_train, y_train)) %>%
@@ -137,7 +138,7 @@ if (FALSE) {
     dataset_shuffle(1000) %>%
     dataset_batch(128, drop_remainder = TRUE)
 
-  model <- deepR::ex_model()
+  model <- ex_model()
 
 
   epochs <- 25
