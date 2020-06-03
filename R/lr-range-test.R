@@ -8,12 +8,13 @@ lr_range_test <-
   function(model,
            dataset,
            epochs = 100,
-           INIT_LR = 1e-6,
-           MAX_LR = 3,
-           factor = 6,
+           INIT_LR = 1e-8,
+           MAX_LR = 1,
+           factor = 10,
            schedule_type = "b",
            plot = TRUE,
-           save_history = FALSE) {
+           save_history = FALSE,
+           history_path = "data/lr-range-test-history.qs") {
 
     # Schedule A needs at least 125 epochs to reach a high lr
     lr_schedule_a <- callback_learning_rate_scheduler(
@@ -52,7 +53,7 @@ lr_range_test <-
     )
 
     if (save_history)
-      qsave(hist, "data/lr-range-test-history.qs")
+      qsave(hist, paste0(history_path, '.qs'))
 
     if (plot)
       plot_lr_range_test_from_hist(hist, max_lr = MAX_LR)
