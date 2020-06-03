@@ -41,6 +41,8 @@ lr_range_test <-
       b = lr_schedule_b
     )
 
+    if ("tensorflow.python.keras.engine.sequential.Sequential" %in% class(model))
+      fit <- keras:::fit.keras.engine.training.Model
 
     hist <- model %>% fit(
       dataset,
