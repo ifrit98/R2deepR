@@ -13,7 +13,7 @@ lr_range_test <-
            factor = 10,
            schedule_type = "b",
            plot = TRUE,
-           save_history = FALSE,
+           save_history = TRUE,
            history_path = "data/lr-range-test-history.qs") {
 
     # Schedule A needs at least 125 epochs to reach a high lr
