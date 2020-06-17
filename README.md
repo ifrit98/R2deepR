@@ -8,7 +8,21 @@ R2deepR is an R package designed to make the lives of Deep Learning practitioner
 ## Features
 
 ### Feature Scaling
-![alt text](https://github.com/ifrit98/R2deepR/raw/master/assets/feature-scale.png "")
+Standardization
+
+![alt text](https://github.com/ifrit98/R2deepR/raw/master/assets/standardize.png "")
+
+![alt text](https://github.com/ifrit98/R2deepR/raw/master/assets/standard-scale.png "")
+
+Minmax Normalization
+
+![alt text](https://github.com/ifrit98/R2deepR/raw/master/assets/minmax.png "")
+
+![alt text](https://github.com/ifrit98/R2deepR/raw/master/assets/minmax-scaler.png "")
+
+Unit Vector Scaling
+
+![alt text](https://github.com/ifrit98/R2deepR/raw/master/assets/unit-scaler.png "")
 
 
 ### Custom callbacks 
