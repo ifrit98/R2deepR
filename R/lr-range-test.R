@@ -58,8 +58,9 @@ lr_range_test <-
     if (plot)
       plot_lr_range_test_from_hist(hist, max_lr = MAX_LR)
 
-    infer_best_lr_params(hist, factor)
+      infer_best_lr_params(hist, factor)
   }
+
 
 
 
@@ -71,7 +72,8 @@ plot_lr_range_test_from_hist <-
   function(history,
            filename = "learn_rate_range_test",
            max_loss = 10,
-           max_lr = 3) {
+           max_lr = 1,
+           factor = 10) {
 
     loss <- history$metrics$loss
     lr   <- history$metrics$lr
@@ -83,25 +85,56 @@ plot_lr_range_test_from_hist <-
       lr   <- lr[1:cut_index]
     }
 
-    lr_cut_index <- which.min(match(lr > max_lr, TRUE))
+
+    compute_lr_cut_idx <- function(loss) {
+
+      min_loss <- min(loss)
+      idx <- which(loss == min_loss)
+
+      f <- function(x, y, d = 0.9) {
+        abs(x - y) >= d
+      }
+
+      g <- function(loss) {
+        {purrr::map2(
+          loss,
+          dplyr::lag(loss, default = NA),
+          .f = f
+        ) %>% unlist() %>% which()}[[1]]
+      }
+
+      g(loss)
+    }
+
+    lr_cut_index <- compute_lr_cut_idx(loss)
     if (!is_empty(lr_cut_index)) {
-      lr[lr_cut_index] <- 3
       lr <- lr[1:lr_cut_index]
       loss <- loss[1:lr_cut_index]
     }
 
     df <- bind_cols(lr = lr, loss = loss)
 
+    xintercept_max <- lr[[which(loss == min(loss))]]
+    xintercept_min <- xintercept_max / factor
+
     ggplot(df, aes(lr, loss)) +
       geom_line() +
       geom_point() +
-      ggsave(file=paste0(filename, ".pdf"), width=8, height=4, dpi=600)
+      geom_vline(xintercept = xintercept_max,
+                 linetype="dotted",
+                 color = "red",
+                 size = 1.5) +
+      geom_vline(xintercept = xintercept_min,
+                 linetype="dotted",
+                 color = "blue",
+                 size = 1.5) +
+      ggsave(file = paste0(filename, ".pdf"), width = 8, height = 4, dpi = 600)
   }
 
 
 
 #' @export
-infer_best_lr_params <- function(history, factor = 6) {
+infer_best_lr_params <- function(history, factor = 10) {
   loss <- history$metrics$loss
   min_loss <- min(loss)
   idx <- which(loss == min_loss)
